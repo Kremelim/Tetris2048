@@ -203,3 +203,40 @@ class Tetromino:
                   break  # end the inner for loop
       # if this method does not end by returning False before this line
       return True  # this tetromino can be moved in the given direction
+   
+   # Method for rotating the tetromino 90-degree clockwise
+   def rotate(self, game_grid):
+      """
+      Rotates the tetromino 90 degrees clockwise within its boundaries.
+      """
+      # O shape is always valid
+      if self.type == 'O':
+         return True
+      # Get matrix size and create tempoary matrix
+      n = len(self.tile_matrix)
+      rotated_matrix = np.full((n,n), None)
+
+      # Calculate the new position after 90-degree clockwise rotation
+      for r in range(n): #iterate through rows
+         for c in range(n): #iterate through columns
+            if self.tile_matrix[r][c] is not None:
+               new_row = c
+               new_col = n - 1 - r
+               #Deep copy the tile into the new position in the temporary
+               rotated_matrix[new_row][new_col] = cp.deepcopy(self.tile_matrix[r][c])
+
+      # Checking for if the new positions are valid
+      for r in range(n):
+         for c in range(n):
+            if rotated_matrix[r][c] is not None:
+                potential_x = self.bottom_left_cell.x + c
+                potential_y = self.bottom_left_cell.y + (n - 1) - r
+                # Check for grid boundaries
+                if not game_grid.is_inside(potential_y, potential_x):
+                   return False
+                # Check for collision
+                if game_grid.is_occupied(potential_y, potential_x):
+                   return False
+      # Update the matrix, apply rotation
+      self.tile_matrix = rotated_matrix
+      return True
