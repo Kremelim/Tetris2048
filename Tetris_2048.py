@@ -71,6 +71,11 @@ def start():
          tiles, pos = current_tetromino.get_min_bounded_tile_matrix(True)
          # update the game grid by locking the tiles of the landed tetromino
          game_over = grid.update_grid(tiles, pos)
+
+         if not game_over:
+            # checking and clearing lines if row is full
+            lines_cleared_count = grid.check_and_clear_lines()
+         
          # end the main game loop if the game is over
          if game_over:
             break
