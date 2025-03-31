@@ -46,6 +46,7 @@ def start():
 
    # the main game loop
    while True:
+      hard_dropped = False # Flag to see if we performed hard drop
       # check for any user interaction via the keyboard
       if stddraw.hasNextKeyTyped():  # check if the user has pressed a key
          key_typed = stddraw.nextKeyTyped()  # the most recently pressed key
@@ -66,12 +67,22 @@ def start():
          elif key_typed == "up":
             # rotate the tetromino 90-degree clockwise
             current_tetromino.rotate(grid)
+         # if the space has been pressed
+         elif key_typed == "space":
+            while current_tetromino.move("down", grid):
+               pass
+            hard_dropped = True
          # clear the queue of the pressed keys for a smoother interaction
          stddraw.clearKeysTyped()
 
-      # move the active tetromino down by one at each iteration (auto fall)
-      success = current_tetromino.move("down", grid)
-      # lock the active tetromino onto the grid when it cannot go down anymore
+      if not hard_dropped:
+         # move the active tetromino down by one at each iteration (auto fall)
+         success = current_tetromino.move("down", grid)
+         # lock the active tetromino onto the grid when it cannot go down anymore
+      else:
+         # if hard dropped is performed
+         success = False
+      
       if not success:
          # get the tile matrix of the tetromino without empty rows and columns
          # and the position of the bottom left cell in this matrix
