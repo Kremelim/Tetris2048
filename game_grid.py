@@ -92,6 +92,37 @@ class GameGrid:
          return False
       return True
 
+   # A method for check and clear lines if rows are full
+   def check_and_clear_lines(self):
+      """
+      Checks for and clears completed lines from bottom to top
+      Shifts the rows above cleared lines down
+      Returns number of lines cleared in this step
+      """
+      lines_cleared = 0
+      row = 0
+      while row < self.grid_height:
+         is_row_full = True
+
+         for col in range(self.grid_width):
+            if self.tile_matrix[row][col] is None:
+               is_row_full = False
+               break # found an empty cell
+
+         if is_row_full:
+            lines_cleared +=1
+            # row is full, clear it and shift rows above down
+            for r_shift in range(row, self.grid_height - 1):
+               self.tile_matrix[r_shift] = self.tile_matrix[r_shift + 1].copy()
+            # Clear the topmost row
+            self.tile_matrix[self.grid_height - 1] = np.full(self.grid_width, None)
+
+         else:
+            # row wasn't full, move on the next row up for checking
+            row += 1
+
+      return lines_cleared
+
    # A method that locks the tiles of a landed tetromino on the grid checking
    # if the game is over due to having any tile above the topmost grid row.
    # (This method returns True when the game is over and False otherwise.)
