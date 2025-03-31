@@ -14,6 +14,8 @@ class GameGrid:
       self.tile_matrix = np.full((grid_h, grid_w), None)
       # create the tetromino that is currently being moved on the game grid
       self.current_tetromino = None
+      # add storage for the next piece
+      self.next_tetromino = None
       # the game_over flag shows whether the game is over or not
       self.game_over = False
       # set the color used for the empty grid cells
@@ -35,6 +37,42 @@ class GameGrid:
       # (the case when the game grid is updated)
       if self.current_tetromino is not None:
          self.current_tetromino.draw()
+
+      # next tetromino labels on game grid
+      if self.next_tetromino is not None:
+         preview_box_x = self.grid_width + 0.5
+         preview_box_w = 5
+         preview_box_h = 4
+         preview_box_y = self.grid_height - preview_box_h - 1.5
+         # NEXT label above the box
+         stddraw.setPenColor(Color(255, 255, 255))
+         stddraw.setFontFamily("Arial")
+         stddraw.setFontSize(18)
+         stddraw.text(preview_box_x + preview_box_w / 2,
+                      preview_box_y + preview_box_h + 0.5,
+                      "NEXT")
+         # Border for preview box
+         stddraw.setPenRadius(self.line_thickness)
+         stddraw.setPenColor(self.line_color)
+         stddraw.rectangle(preview_box_x, preview_box_y,
+                           preview_box_w, preview_box_h)
+         stddraw.setPenRadius()
+
+         next_tiles = self.next_tetromino.get_min_bounded_tile_matrix()
+         n_rows, n_cols = len(next_tiles), len(next_tiles[0])
+         # center the piece within the preview box
+         offset_x = (preview_box_w - n_cols) / 2.0
+         offset_y = (preview_box_h - n_rows) / 2.0
+
+         # Draw each tile of the next tetromino relative to the preview box
+         for r in range(n_rows):
+            for c in range(n_cols):
+               if next_tiles[r][c] is not None:
+                  draw_x = preview_box_x + offset_x + c
+                  draw_y = preview_box_y + offset_y + (n_rows - 1 - r) + 0.5
+
+                  tile_to_draw = cp.deepcopy(next_tiles[r][c])
+                  tile_to_draw.draw(Point(draw_x, draw_y))
       # draw a box around the game grid
       self.draw_boundaries()
       # show the resulting drawing with a pause duration = 250 ms
