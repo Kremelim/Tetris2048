@@ -30,7 +30,65 @@ class GameGrid:
       # thickness values used for the grid lines and the grid boundaries
       self.line_thickness = 0.002
       self.box_thickness = 10 * self.line_thickness
+      # --- New Method: apply_gravity ---
+   def apply_gravity_to_column(self, col_index):
+      """Shifts tiles down in a specific column to fill empty spaces below them."""
+      # Use a 'write_pointer' for the next row to place a tile
+      write_pointer = 0
+      for read_pointer in range(self.grid_height):
+         # If we find a tile at the read_pointer
+         if self.tile_matrix[read_pointer][col_index] is not None:
+            # If the read_pointer is ahead of the write_pointer, move the tile down
+            if read_pointer != write_pointer:
+               self.tile_matrix[write_pointer][col_index] = self.tile_matrix[read_pointer][col_index]
+               self.tile_matrix[read_pointer][col_index] = None # Clear the original spot
+            # Advance the write_pointer to the next potentially empty spot
+            write_pointer += 1
 
+   def apply_gravity(self):
+        """Applies gravity to all columns."""
+        for col in range(self.grid_width):
+            self.apply_gravity_to_column(col)
+   # --- End New Method: apply_gravity ---
+
+
+   # --- New Method: handle_merges ---
+   def handle_merges(self):
+      """Checks for and performs merges column by column, bottom-up.
+         Returns the score gained from merges in this pass and if any merge occurred."""
+      score_from_merges = 0
+      merge_occurred = False
+      for col in range(self.grid_width):
+         # Iterate bottom-up (from row 0 up to grid_height - 2)
+         # Check tile at 'row' with tile at 'row + 1'
+         for row in range(self.grid_height - 1):
+            tile_current = self.tile_matrix[row][col]
+            tile_above = self.tile_matrix[row + 1][col]
+
+            # Check if merge is possible (both tiles exist and have same number)
+            if tile_current is not None and tile_above is not None and \
+               tile_current.number == tile_above.number:
+
+               # Perform merge: Update current tile's number and color, remove upper tile
+               new_number = tile_current.number * 2
+               tile_current.update_number_and_color(new_number) # Use the method from tile.py
+               self.tile_matrix[row + 1][col] = None # Remove the upper tile
+
+               # Update score and flag
+               score_from_merges += new_number
+               merge_occurred = True
+
+               # Optional: Check for win condition here if you add self.game_won flag
+               # if new_number == 2048:
+               #    self.game_won = True
+
+               # Important: After a merge, gravity needs to be reapplied to this column
+               # before potentially merging the newly formed tile upwards.
+               # However, the main loop in update_grid handles the repeated gravity/merge cycle.
+               # So we just report that a merge happened.
+
+      return score_from_merges, merge_occurred
+   # --- End New Method: handle_merges ---
    # A method for displaying the game grid
    def display(self):
       # clear the background to empty_cell_color
