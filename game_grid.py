@@ -19,6 +19,10 @@ class GameGrid:
       # the game_over flag shows whether the game is over or not
       self.game_over = False
       # set the color used for the empty grid cells
+      # --- Add score attribute ---
+      self.score = 0
+      # --- Add win condition flag (optional for now, useful later) ---
+      # self.game_won = False
       self.empty_cell_color = Color(42, 69, 99)
       # set the colors used for the grid lines and the grid boundaries
       self.line_color = Color(0, 100, 200)
