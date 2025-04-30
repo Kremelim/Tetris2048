@@ -237,23 +237,51 @@ class GameGrid:
    # A method that locks the tiles of a landed tetromino on the grid checking
    # if the game is over due to having any tile above the topmost grid row.
    # (This method returns True when the game is over and False otherwise.)
-   def update_grid(self, tiles_to_lock, blc_position):
-      # necessary for the display method to stop displaying the tetromino
-      self.current_tetromino = None
-      # lock the tiles of the current tetromino (tiles_to_lock) on the grid
-      n_rows, n_cols = len(tiles_to_lock), len(tiles_to_lock[0])
-      for col in range(n_cols):
-         for row in range(n_rows):
-            # place each tile (occupied cell) onto the game grid
-            if tiles_to_lock[row][col] is not None:
-               # compute the position of the tile on the game grid
-               pos = Point()
-               pos.x = blc_position.x + col
-               pos.y = blc_position.y + (n_rows - 1) - row
-               if self.is_inside(pos.y, pos.x):
-                  self.tile_matrix[pos.y][pos.x] = tiles_to_lock[row][col]
-               # the game is over if any placed tile is above the game grid
-               else:
-                  self.game_over = True
-      # return the value of the game_over flag
-      return self.game_over
+  def update_grid(self, tiles_to_lock, blc_position):
+        # Lock the tiles onto the grid
+        self.current_tetromino = None # Stop drawing the active tetromino
+        n_rows, n_cols = len(tiles_to_lock), len(tiles_to_lock[0])
+        game_over_check = False # Temporary flag
+        for col in range(n_cols):
+            for row in range(n_rows):
+                tile = tiles_to_lock[row][col]
+                if tile is not None:
+                    pos = Point()
+                    pos.x = blc_position.x + col
+                    pos.y = blc_position.y + (n_rows - 1) - row
+                    if self.is_inside(pos.y, pos.x):
+                        self.tile_matrix[int(round(pos.y))][int(round(pos.x))] = tile
+                    else:
+                        game_over_check = True # Mark for game over, but finish locking
+                        # Don't return immediately, let the piece appear locked first
+
+        # --- Force a redraw showing the locked piece BEFORE merging ---
+        if not game_over_check: # Only draw if not game over yet
+             # Temporarily clear the background and draw grid/locked piece
+             stddraw.clear(self.empty_cell_color)
+             self.draw_grid() # Draw grid with the newly locked piece
+             self.draw_boundaries()
+             stddraw.show(50) # Show for a very short time (e.g., 50ms)
+        # --- End forced redraw ---
+
+        # Now check for game over definitively
+        if game_over_check:
+            self.game_over = True
+            return self.game_over # Exit if game is over
+
+        # --- Post-Landing Sequence: Gravity & Merging Loop (Runs AFTER the redraw) ---
+        total_merge_score = 0
+        while True:
+            self.apply_gravity()
+            score_this_pass, merged_this_pass = self.handle_merges()
+            total_merge_score += score_this_pass
+            if not merged_this_pass:
+                break
+
+        self.score += total_merge_score
+        # --- End Post-Landing Sequence ---
+
+        # --- TODO: Future Steps (Placeholders) ---
+        # ... (line clearing, free tiles) ...
+
+        return self.game_over
