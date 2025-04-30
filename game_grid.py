@@ -99,6 +99,17 @@ class GameGrid:
       # (the case when the game grid is updated)
       if self.current_tetromino is not None:
          self.current_tetromino.draw()
+      
+      # --- Draw Score (Added in previous step, ensure it's here) ---
+      stddraw.setPenColor(Color(255, 255, 255))  # White text color
+      stddraw.setFontFamily("Arial")
+      stddraw.setFontSize(20)
+      # Adjust position based on your canvas scaling (example assumes space at top)
+      score_text_x = self.grid_width / 2  # Centered?
+      score_text_y = self.grid_height + 2  # Position in the UI space above grid
+      stddraw.text(score_text_x, score_text_y, "Score")
+      stddraw.text(score_text_x, score_text_y - 1, str(self.score))
+      # --- End Score Display ---   
 
       # next tetromino labels on game grid
       if self.next_tetromino is not None:
