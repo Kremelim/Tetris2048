@@ -10,7 +10,7 @@ class Tetromino:
    grid_height, grid_width = None, None
 
    # A constructor for creating a tetromino with a given shape (type)
-   def _init_(self, shape):
+   def __init__(self, shape):
       self.type = shape  # set the type of this tetromino
       # determine the occupied (non-empty) cells in the tile matrix based on
       # the shape of this tetromino (see the documentation given with this code)
