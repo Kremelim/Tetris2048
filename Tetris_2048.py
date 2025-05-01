@@ -1,33 +1,23 @@
 # --- START OF FILE Tetris_2048.py ---
 
-################################################################################
-#                                                                              #
-# The main program of Tetris 2048 Base Code                                    #
-#                                                                              #
-################################################################################
-
-import lib.stddraw as stddraw  # for creating an animation with user interactions
-from lib.picture import Picture  # used for displaying an image on the game menu
-from lib.color import Color  # used for coloring the game menu
-import os  # the os module is used for file and directory operations
-from game_grid import GameGrid  # the class for modeling the game grid
-from tetromino import Tetromino  # the class for modeling the tetrominoes
-import random  # used for creating tetrominoes with random types (shapes)
-import time  # For dynamic timing
+# ... (imports and configuration remain the same) ...
+import lib.stddraw as stddraw
+from lib.picture import Picture
+from lib.color import Color
+import os
+from game_grid import GameGrid
+from tetromino import Tetromino
+import random
+import time
 import pygame.mixer
 
 # --- Configuration ---
-# Game grid dimensions
 GRID_H, GRID_W = 20, 12
-# Width for the next piece display area
 PREVIEW_AREA_WIDTH = 6
-# Target FPS
 TARGET_FPS = 30
-# Gravity interval (seconds)
 INITIAL_GRAVITY_INTERVAL = 0.8
-# Music file path (relative to this script)
-MUSIC_FILE = os.path.join("sounds", "Tetris.mp3") # ADJUST FILENAME if needed
-INITIAL_VOLUME = 0.2 # Volume from 0.0 (silent) to 1.0 (full)
+MUSIC_FILE = os.path.join("sounds", "Tetris.mp3")
+INITIAL_VOLUME = 0.2
 
 # The main function where this program starts execution
 def start():
@@ -48,21 +38,17 @@ def start():
     music_playing = False
     try:
         pygame.mixer.init()
-        # Get the directory in which this python code file is placed
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        # Compute the full path to the music file
+        current_dir = os.path.dirname(os.path.realpath(_file_))
         music_file_path = os.path.join(current_dir, MUSIC_FILE)
 
         if os.path.exists(music_file_path):
             pygame.mixer.music.load(music_file_path)
             pygame.mixer.music.set_volume(INITIAL_VOLUME)
-            pygame.mixer.music.play(loops=-1)  # Loop indefinitely
+            pygame.mixer.music.play(loops=-1)
             music_playing = True
             print(f"Playing background music: {music_file_path}")
         else:
             print(f"Warning: Background music file not found at {music_file_path}")
-            print("Current directory:", current_dir)
-            print("Looking for relative path:", MUSIC_FILE)
     except pygame.error as e:
         print(f"Warning: Could not initialize mixer or load/play music: {e}")
     # --- End Music Initialization --
@@ -72,7 +58,6 @@ def start():
     Tetromino.grid_width = grid_w
 
     # display a simple menu before opening the game
-    # by using the display_game_menu function defined below
     display_game_menu(grid_h, grid_w)
 
     # start the game loop
@@ -101,27 +86,26 @@ def play_game(grid_h, grid_w, preview_area_width):
     gravity_interval = INITIAL_GRAVITY_INTERVAL
     last_gravity_time = time.time()
 
-    # Function to create the first tetromino and check for immediate game over
-    def spawn_tetromino(grid):
-        tetromino = create_tetromino()
-        grid.current_tetromino = tetromino
-        # Check if the spawn position is valid *immediately*
-        if not tetromino.can_be_moved("down", grid, check_initial=True): # Need to adapt can_be_moved slightly
-             return None # Indicate spawn failed
-        return tetromino
-
-    # Create first tetromino and handle potential immediate game over
-    current_tetromino = spawn_tetromino(grid)
-    if current_tetromino is None:
-        grid.game_over = True # Set game over if spawn failed
+    # --- Initial Piece Creation ---
+    # Create the very first piece directly
+    current_tetromino = create_tetromino()
+    grid.current_tetromino = current_tetromino
+    # Validate its initial spawn position
+    if not current_tetromino.can_be_moved("down", grid, check_initial=True):
+        print("Game Over: Cannot spawn initial piece.") # Debug message
+        grid.game_over = True
+        current_tetromino = None  # Ensure it's None if spawn failed
+        grid.current_tetromino = None
+        next_tetromino = None # No next piece either
+        grid.next_tetromino = None
     else:
-         # create next tetromino that will follow only if spawn was successful
-         next_tetromino = create_tetromino()
-         grid.next_tetromino = next_tetromino  # assign it to the grid object
+        # If the first piece spawns successfully, create the next piece for the preview
+        next_tetromino = create_tetromino()
+        grid.next_tetromino = next_tetromino  # assign it to the grid object
 
     # Game state variables
     paused = False
-    # grid.game_over is already initialized
+    # grid.game_over is already initialized based on initial spawn check
 
     # the main game loop
     while True:
@@ -135,19 +119,16 @@ def play_game(grid_h, grid_w, preview_area_width):
             # Pause/resume with 'p' key
             if key_typed == "p":
                 paused = not paused
-                # If pausing, record current time to adjust gravity timer on resume
                 if paused:
                     pause_start_time = time.time()
-                    if pygame.mixer.music.get_busy():  # Check if music is playing before pausing
+                    if pygame.mixer.music.get_busy():
                         pygame.mixer.music.pause()
                 else:
-                    # Adjust last gravity time by duration of pause
                     pause_duration = time.time() - pause_start_time
                     last_gravity_time += pause_duration
-                    if not pygame.mixer.music.get_busy():  # Check if music is paused before unpausing
+                    if not pygame.mixer.music.get_busy():
                         pygame.mixer.music.unpause()
-                stddraw.clearKeysTyped() # Clear keys after handling 'p'
-                # continue # Continue loop to redraw immediately with pause state
+                stddraw.clearKeysTyped()
 
             # Restart with 'r' key
             elif key_typed == "r":
@@ -169,82 +150,99 @@ def play_game(grid_h, grid_w, preview_area_width):
                     moved = current_tetromino.move(key_typed, grid)
                 elif key_typed == "down":
                     moved = current_tetromino.move(key_typed, grid)
-                    if moved: # Soft drop resets gravity timer
+                    if moved:
                          last_gravity_time = time.time()
                 elif key_typed == "up":
                     rotated = current_tetromino.rotate(grid)
                 elif key_typed == "space":
-                    # Hard drop: move down until it stops
                     while current_tetromino.move("down", grid):
-                        pass # Keep moving down
-                    hard_dropped = True # Set flag to trigger landing logic immediately
-
-            # Maybe clear keys here if they are still interfering? Usually needed *after* processing.
-            # stddraw.clearKeysTyped() # Let's try without clearing here unless needed
+                        pass
+                    hard_dropped = True
 
         # --- Game Logic (only if not paused/over) ---
         if not paused and not grid.game_over and current_tetromino is not None:
             # Automatic downward movement (gravity)
             current_time = time.time()
+            gravity_move_attempted = False
             if not hard_dropped and current_time - last_gravity_time >= gravity_interval:
-                success = current_tetromino.move("down", grid)
+                success_gravity = current_tetromino.move("down", grid)
                 last_gravity_time = current_time # Reset timer regardless of success
-            else:
-                # If hard dropped or gravity interval not reached, check if current move failed
-                # (e.g. user tried to move down into something, or hard drop finished)
-                success = hard_dropped or current_tetromino.can_be_moved("down", grid)
+                gravity_move_attempted = True # Flag that gravity tried to move
 
             # --- Landing Logic ---
-            # If the piece couldn't move down naturally OR was hard dropped
-            if not current_tetromino.can_be_moved("down", grid) or hard_dropped:
+            # Check if the piece cannot move down after potential gravity/user move this frame,
+            # OR if it was hard dropped.
+            # The can_be_moved check is crucial here.
+            if hard_dropped or not current_tetromino.can_be_moved("down", grid):
                 # Lock the piece, check lines/merges, update score
                 tiles, pos = current_tetromino.get_min_bounded_tile_matrix(True)
-                grid.update_grid(tiles, pos) # update_grid now handles game_over internally based on overlap
+                # update_grid handles locking & checking game over due to overlap
+                grid.update_grid(tiles, pos)
 
                 # Check win condition (after grid updates)
                 if check_for_win(grid):
                     display_win_screen(grid_h, grid_w)
-                    # Loop for restart/exit options after win
                     while True:
                          if stddraw.hasNextKeyTyped():
                               key = stddraw.nextKeyTyped()
                               if key == 'r': return True
                               if key == 'escape': return False
-                         stddraw.show(50) # Small delay while waiting
+                         stddraw.show(50)
 
-                # Check Game Over state from grid update
+                # Check Game Over state from grid update OR inability to spawn next piece
                 if grid.game_over:
-                    # No need to spawn next piece if game is over
-                    current_tetromino = None
-                    # continue # Go to next loop iteration to display Game Over screen
+                    current_tetromino = None # Clear current piece on game over
+                    grid.current_tetromino = None
+                    grid.next_tetromino = None # Also clear next piece display
+                    # Go to next loop iteration to display Game Over screen
 
-                else:
-                    # Spawn the next piece
-                    current_tetromino = spawn_tetromino(grid) # Use the function that checks spawn validity
+                else: # Game not over yet, proceed to spawn next piece cycle
+                    # 1. The piece previously in 'next' becomes the 'current'
+                    current_tetromino = grid.next_tetromino
+
+                    # Safety check: If next_tetromino was somehow None, it's an error state
                     if current_tetromino is None:
-                        # Failed to spawn the new piece - Game Over!
-                        grid.game_over = True
-                        next_tetromino = None # Clear next piece display as well
+                         print("Error: grid.next_tetromino was None unexpectedly during piece transition.")
+                         grid.game_over = True
+                         grid.current_tetromino = None
+                         grid.next_tetromino = None
+                         next_tetromino = None # Clear local var just in case
                     else:
-                        # Successfully spawned, prepare the *next* next piece
-                        next_tetromino = create_tetromino()
-                        grid.next_tetromino = next_tetromino
+                        # 2. Set the grid's current_tetromino reference
+                        grid.current_tetromino = current_tetromino
 
-                    last_gravity_time = time.time() # Reset gravity timer for new piece
+                        # 3. Check if this newly assigned piece can actually spawn at its default location
+                        if not current_tetromino.can_be_moved("down", grid, check_initial=True):
+                            # Cannot spawn the piece that was in 'next' - Game Over!
+                            print("Game Over: Cannot spawn the next piece.") # Debug message
+                            grid.game_over = True
+                            current_tetromino = None # Clear the invalid current piece
+                            grid.current_tetromino = None
+                            grid.next_tetromino = None # Clear next display too
+                            next_tetromino = None # Clear local var
+                        else:
+                            # 4. Successfully spawned the current piece, now generate the next piece for the preview
+                            next_tetromino = create_tetromino()
+                            grid.next_tetromino = next_tetromino # Store it in the grid
+
+                    # Reset gravity timer for the new piece (or for the game over state)
+                    last_gravity_time = time.time()
 
         # --- Drawing ---
-        display_game_state(grid, paused, grid.game_over) # Pass grid's game_over flag
+        # Pass grid's game_over flag to the display function
+        display_game_state(grid, paused, grid.game_over)
 
         # --- Frame Rate Control ---
         end_time = time.time()
         elapsed_time = end_time - start_time
-        pause_duration = frame_duration - elapsed_time
-        if pause_duration < 0:
-            pause_duration = 0 # Avoid negative pause
+        pause_duration_ms = (frame_duration - elapsed_time) * 1000
+        if pause_duration_ms < 0:
+            pause_duration_ms = 0 # Avoid negative pause
 
         # The only stddraw.show() call should be this one
-        stddraw.show(pause_duration * 1000) # Convert seconds to milliseconds
+        stddraw.show(pause_duration_ms) # Use calculated pause duration
 
+# ... (rest of the functions: check_for_win, display_game_state, display_pause_overlay, display_game_over_overlay, display_win_screen, display_controls_info, create_tetromino, display_game_menu remain the same)
 
 # Helper function to check if any tile has reached 2048
 def check_for_win(grid):
@@ -253,7 +251,6 @@ def check_for_win(grid):
             if grid.tile_matrix[row][col] is not None and grid.tile_matrix[row][col].number >= 2048:
                 return True
     return False
-
 
 # Function to display the current state of the game
 def display_game_state(grid, paused, game_over):
@@ -269,14 +266,14 @@ def display_game_state(grid, paused, game_over):
     # Display controls info at the bottom
     display_controls_info(grid.grid_width)
 
-    # REMOVED: stddraw.show(200) - Handled by the main loop's timing control
-
-
 # Function to display pause overlay (adjusted for centering)
 def display_pause_overlay(grid_w, grid_h):
-    center_x = (grid_w - 1) / 2
-    center_y = (grid_h - 1) / 2
-    stddraw.setPenColor(Color(0, 0, 0)) # Semi-transparent black overlay
+    center_x = (grid_w - 1) / 2.0 # Use float for potentially non-integer center
+    center_y = (grid_h - 1) / 2.0
+    # Use a semi-transparent color by adding an alpha channel (stddraw might not support alpha directly)
+    # If stddraw doesn't support alpha, use a solid dark color
+    # stddraw.setPenColor(Color(0, 0, 0, 150)) # Example with alpha (may not work)
+    stddraw.setPenColor(Color(20, 20, 20)) # Dark solid color as fallback
     stddraw.filledRectangle(-0.5, -0.5, grid_w, grid_h) # Cover grid area
 
     stddraw.setPenColor(stddraw.WHITE)
@@ -288,12 +285,12 @@ def display_pause_overlay(grid_w, grid_h):
     stddraw.text(center_x, center_y - 2, "Press 'r' to restart")
     stddraw.text(center_x, center_y - 3, "Press 'escape' to exit")
 
-
 # Function to display game over overlay (adjusted for centering)
 def display_game_over_overlay(score, grid_w, grid_h):
-    center_x = (grid_w - 1) / 2
-    center_y = (grid_h - 1) / 2
-    stddraw.setPenColor(Color(0, 0, 0)) # Semi-transparent black overlay
+    center_x = (grid_w - 1) / 2.0
+    center_y = (grid_h - 1) / 2.0
+    # stddraw.setPenColor(Color(0, 0, 0, 150)) # Example with alpha (may not work)
+    stddraw.setPenColor(Color(20, 20, 20)) # Dark solid color as fallback
     stddraw.filledRectangle(-0.5, -0.5, grid_w, grid_h) # Cover grid area
 
     stddraw.setPenColor(stddraw.WHITE)
@@ -308,12 +305,10 @@ def display_game_over_overlay(score, grid_w, grid_h):
 
 # Function to display winning screen
 def display_win_screen(grid_h, grid_w):
-    # clear the background
     stddraw.clear(Color(42, 69, 99))
-    center_x = (grid_w - 1) / 2
-    center_y = (grid_h - 1) / 2
+    center_x = (grid_w - 1) / 2.0
+    center_y = (grid_h - 1) / 2.0
 
-    # Display win message
     stddraw.setPenColor(stddraw.WHITE)
     stddraw.setFontFamily("Arial")
     stddraw.setFontSize(40)
@@ -322,9 +317,7 @@ def display_win_screen(grid_h, grid_w):
     stddraw.text(center_x, center_y, "You reached 2048!")
     stddraw.text(center_x, center_y - 2, "Press 'r' to play again")
     stddraw.text(center_x, center_y - 3, "Press 'escape' to exit")
-
-    # Show the win screen initially
-    stddraw.show(20) # Show briefly before entering wait loop
+    stddraw.show(20)
 
 
 # Function to display controls at the bottom of the screen
@@ -333,8 +326,7 @@ def display_controls_info(grid_width):
     stddraw.setFontFamily("Arial")
     stddraw.setFontSize(12)
     controls = "Controls: ← → Move  ↑ Rotate  ↓ Soft Drop  Space Hard Drop  P Pause  R Restart  Esc Exit"
-    # Adjust position slightly to fit within the standard scale
-    stddraw.text((grid_width -1) / 2, -0.3, controls)
+    stddraw.text((grid_width -1) / 2.0, -0.3, controls)
 
 
 # A function for creating random shaped tetrominoes to enter the game grid
@@ -351,74 +343,50 @@ def create_tetromino():
 # A function for displaying a simple menu before starting the game
 def display_game_menu(grid_height, grid_width):
      # (Code for display_game_menu remains unchanged)
-    # the colors used for the menu
     background_color = Color(42, 69, 99)
     button_color = Color(25, 255, 228)
     text_color = Color(31, 160, 239)
-    # clear the background drawing canvas to background_color
     stddraw.clear(background_color)
-    # get the directory in which this python code file is placed
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    # compute the path of the image file
-    img_file = current_dir + "/images/menu_image.png"
-    # Check if image exists, handle potential error
+    current_dir = os.path.dirname(os.path.realpath(_file_))
+    img_file = os.path.join(current_dir, "images", "menu_image.png") # Use os.path.join
+    img_center_x, img_center_y = (grid_width - 1) / 2.0, grid_height - 7
     if not os.path.exists(img_file):
         print(f"Warning: Menu image not found at {img_file}")
-        img_center_x, img_center_y = (grid_width - 1) / 2, grid_height - 7 # Position even if image missing
     else:
-        # the coordinates to display the image centered horizontally
-        img_center_x, img_center_y = (grid_width - 1) / 2, grid_height - 7
-        # the image is modeled by using the Picture class
         image_to_display = Picture(img_file)
-        # add the image to the drawing canvas
         stddraw.picture(image_to_display, img_center_x, img_center_y)
 
-    # Title for the game
     stddraw.setFontFamily("Arial")
     stddraw.setFontSize(35)
     stddraw.setPenColor(Color(255, 255, 255))
-    # Use the calculated img_center_x for centering text as well
     stddraw.text(img_center_x, grid_height - 3, "TETRIS 2048")
 
-    # the dimensions for the start game button
     button_w, button_h = grid_width - 1.5, 2
-    # the coordinates of the bottom left corner for the start game button
     button_blc_x, button_blc_y = img_center_x - button_w / 2, 4
-    # add the start game button as a filled rectangle
     stddraw.setPenColor(button_color)
     stddraw.filledRectangle(button_blc_x, button_blc_y, button_w, button_h)
-    # add the text on the start game button
     stddraw.setFontFamily("Arial")
     stddraw.setFontSize(25)
     stddraw.setPenColor(text_color)
     text_to_display = "Click Here to Start the Game"
     stddraw.text(img_center_x, 5, text_to_display)
 
-    # Add controls information
     stddraw.setFontFamily("Arial")
     stddraw.setFontSize(15)
     stddraw.setPenColor(Color(200, 200, 200))
     stddraw.text(img_center_x, 2, "Controls: Arrow Keys to Move/Rotate, Space for Hard Drop")
     stddraw.text(img_center_x, 1, "P to Pause, R to Restart, Esc to Exit")
 
-    # the user interaction loop for the simple menu
     while True:
-        # display the menu and wait for a short time (50 ms)
-        stddraw.show(50) # Keep show here for menu interaction
-        # check if the mouse has been left-clicked on the start game button
+        stddraw.show(50)
         if stddraw.mousePressed():
-            # get the coordinates of the most recent location at which the mouse
-            # has been left-clicked
             mouse_x, mouse_y = stddraw.mouseX(), stddraw.mouseY()
-            # check if these coordinates are inside the button
             if mouse_x >= button_blc_x and mouse_x <= button_blc_x + button_w:
                 if mouse_y >= button_blc_y and mouse_y <= button_blc_y + button_h:
-                    break  # break the loop to end the method and start the game
+                    break
 
 
-# start() function is specified as the entry point (main function) from which
-# the program starts execution
-if __name__ == '__main__':
+if _name_ == '_main_':
     start()
 
 # --- END OF FILE Tetris_2048.py ---
